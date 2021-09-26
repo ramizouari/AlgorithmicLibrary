@@ -143,6 +143,11 @@ public:
 		return h(hash);
 	}
 
+    std::uint64_t opreator()(T u) const
+    {
+        return apply(u);
+    }
+
 	std::uint64_t apply_poly(T u) const
 	{
 		std::uint64_t hash(0);
