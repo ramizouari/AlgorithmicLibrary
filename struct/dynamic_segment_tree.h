@@ -2,11 +2,12 @@
 // Created by ramizouari on 26/09/2021.
 //
 /*
- * A Dynamic Segment Tree is a Data Structure supporting:
+ * A Dynamic Segment Tree of size n is a Data Structure supporting:
  * 1. Insertion and Deletion Anywhere in O(ln n)
  * 2. Range Queries on  O(ln n)
  * 3. O(n) memory
  *
+ * The Construction time will take O(n*ln n)
  * */
 
 
@@ -19,7 +20,7 @@ template<typename T,typename O =plus_t<T>>
 struct dst_node
 {
     inline static O F=O();
-    T v,left_sum,right_sum;
+    T v,sum;
     int height,left_size,size;
     dst_node * left, * right, *parent;
 };
@@ -80,10 +81,10 @@ namespace dst_utils
         else if(n<a->left_size)
             return prefix_query(a->left,n);
         else if(n==a->left_size)
-            return a->left_sum;
+            return a->left?a->left->sum:O::neutral;
         else if(n==a->size)
-            return K::F(K::F(a->left_sum,a->v),a->right_sum);
-        return K::F(K::F(a->left_sum,a->v),prefix_query(a->right,n-a->left_size-1));
+            return a->sum;
+        return K::F(K::F(a->left?a->left->sum:O::neutral,a->v),prefix_query(a->right,n-a->left_size-1));
     }
 
     template<typename T, typename O=plus_t<T>>
@@ -222,10 +223,8 @@ namespace dst_utils
         x->size=x->left_size+1+(C?C->size:0);
         y->left_size=(A?A->size:0);
         y->size=y->left_size+1+x->size;
-        x->left_sum=B?K::F(B->left_sum,K::F(B->v,B->right_sum)):O::neutral;
-        x->right_sum=B?K::F(C->left_sum,K::F(C->v,C->right_sum)):O::neutral;
-        y->right_sum=K::F(x->left_sum,K::F(x->v,x->right_sum));
-        y->left_sum=A?(K::F(A->left_sum,K::F(A->v,A->right_sum))):O::neutral;
+        x->sum=K::F(B?B->sum:O::neutral,K::F(x->v,C?C->sum:O::neutral));
+        y->sum=K::F(A?A->sum:O::neutral,K::F(y->v,x->sum));
         if (A)
             A->parent = y;
         if (P)
@@ -259,12 +258,10 @@ namespace dst_utils
         x->right = B;
         x->left_size=(C?C->size:0);
         x->size=x->left_size+(B?B->size:0)+1;
-        x->left_sum=C?K::F(C->left_sum,K::F(C->v,C->right_sum)):O::neutral;
-        x->right_sum=B?K::F(B->left_sum,K::F(B->v,B->right_sum)):O::neutral;
-        y->left_sum=K::F(x->left_sum,K::F(x->v,x->right_sum));
-        y->right_sum=A?K::F(A->left_sum,K::F(A->v,A->right_sum)):O::neutral;
         y->left_size=x->size;
         y->size=y->left_size+1+(A?A->size:0);
+        x->sum=K::F(C?C->sum:O::neutral,K::F(x->v,B?B->sum:O::neutral));
+        y->sum=K::F(K::F(x->sum,y->v),A?A->sum:O::neutral);
 
         if (P)
         {
@@ -339,8 +336,7 @@ namespace dst_utils
             tree->height = 1;
             tree->left_size=0;
             tree->size=1;
-            tree->left_sum=O::neutral;
-            tree->right_sum=O::neutral;
+            tree->sum=v;
             return tree;
         }
         bool insert_left=o<tree->size;
@@ -364,18 +360,17 @@ namespace dst_utils
         p->right = nullptr;
         p->left = nullptr;
         p->parent = dist;
-        p->left_sum=O::neutral;
-        p->right_sum=O::neutral;
+        p->sum=O::neutral;
         if (insert_left)
         {
             dist->left = p;
-            dist->left_sum=p->v;
+            dist->sum=K::F(p->sum,K::F(dist->v,dist->right?dist->right->sum:O::neutral));
             dist->left_size=p->size;
             dist->size=(dist->left_size+1+(dist->right?dist->right->size:0));
         }
         else {
             dist->right = p;
-            dist->right_sum=p->v;
+            dist->sum=K::F(K::F(dist->left?dist->left->sum:O::neutral,dist->v),p->sum);
             dist->size=(dist->left_size+1+p->size);
         }
         dist->height = std::max(height(dist->right), height(dist->left)) + 1;
@@ -383,8 +378,7 @@ namespace dst_utils
         {
             p->left_size=(p->left?p->left->size:0);
             p->size=p->left_size+1+(p->right?p->right->size:0);
-            p->left_sum=(p->left?K::F(p->left->left_sum,K::F(p->left->right_sum,p->left->v)):O::neutral);
-            p->right_sum=(p->right?K::F(p->right->left_sum,K::F(p->right->right_sum,p->right->v)):O::neutral);
+            p->sum=K::F(p->left?p->left->sum:O::neutral,K::F(p->v,p->right?p->right->sum:O::neutral));
             p=p->parent;
         }
         rebalance(dist);
@@ -740,14 +734,12 @@ public:
 
     void update(int p,const T&a)
     {
-        using K=dst_node<T,O>;
-        auto u=dst_utils::find_by_order(root,p);
-        u->v=a;
-        while(u)
-        {
-            u->left_sum=u->left?(K::F(u->left->left_sum,K::F(u->left->v,u->left->right_sum))):0;
-            u->right_sum=u->left?(K::F(u->right->left_sum,K::F(u->right->v,u->right->right_sum))):0;
-            u=u->parent;
+        using K = dst_node<T, O>;
+        auto u = dst_utils::find_by_order(root, p);
+        u->v = a;
+        while (u) {
+            u->sum = K::F(u->left ? u->left->sum : O::neutral, K::F(u->v, u->right ? u->right->sum : O::neutral));
+            u = u->parent;
         }
     }
 };

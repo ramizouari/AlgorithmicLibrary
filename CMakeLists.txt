@@ -28,6 +28,7 @@ add_executable(AlgorithmicLibrary
         struct/binary_operator.h
         struct/ordered_segment_tree.h
         struct/dynamic_segment_tree.h
+        struct/sparse_array.h
         struct/segment_tree.h
         struct/stack.h
         main_2.cpp)

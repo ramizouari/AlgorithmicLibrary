@@ -21,7 +21,7 @@ template<typename T,typename O =plus_t<T>>
 struct ost_node
 {
     inline static O F=O();
-    T v,left_sum,right_sum;
+    T v,sum;
     int height,left_size,size;
     ost_node * left, * right, *parent;
 };
@@ -35,6 +35,29 @@ namespace ost_utils
         if (!tree)
             return 0;
         return tree->height;
+    }
+
+    template<typename T,typename O=plus_t<T>>
+    ost_node<T,O>* clone(ost_node<T,O> * u)
+    {
+        if(!u)
+            return nullptr;
+        auto s= new ost_node<T,O>;
+        s->v=u->v;
+        s->sum=u->sum;
+        s->height=u->height;
+        s->left_size=u->left_size;
+        s->size=u->size;
+        s->parent=nullptr;
+        auto p=clone(u->left);
+        auto q=clone(u->right);
+        if(p)
+            p->parent=s;
+        if(q)
+            q->parent=s;
+        s->left=p;
+        s->right=q;
+        return s;
     }
 
     template<typename T, typename O=plus_t<T>>
@@ -82,10 +105,10 @@ namespace ost_utils
         else if(n<a->left_size)
             return prefix_query(a->left,n);
         else if(n==a->left_size)
-            return a->left_sum;
+            return a->left?a->left->sum:O::neutral;
         else if(n==a->size)
-            return K::F(K::F(a->left_sum,a->v),a->right_sum);
-        return K::F(K::F(a->left_sum,a->v),prefix_query(a->right,n-a->left_size-1));
+            return a->sum;
+        return K::F(K::F(a->left?a->left->sum:O::neutral,a->v),prefix_query(a->right,n-a->left_size-1));
     }
 
     template<typename T, typename O=plus_t<T>>
@@ -326,10 +349,8 @@ namespace ost_utils
         x->size=x->left_size+1+(C?C->size:0);
         y->left_size=(A?A->size:0);
         y->size=y->left_size+1+x->size;
-        x->left_sum=B?K::F(B->left_sum,K::F(B->v,B->right_sum)):O::neutral;
-        x->right_sum=B?K::F(C->left_sum,K::F(C->v,C->right_sum)):O::neutral;
-        y->right_sum=K::F(x->left_sum,K::F(x->v,x->right_sum));
-        y->left_sum=A?(K::F(A->left_sum,K::F(A->v,A->right_sum))):O::neutral;
+        x->sum=K::F(B?B->sum:O::neutral,K::F(x->v,C?C->sum:O::neutral));
+        y->sum=K::F(A?A->sum:O::neutral,K::F(y->v,x->sum));
         if (A)
             A->parent = y;
         if (P)
@@ -363,10 +384,8 @@ namespace ost_utils
         x->right = B;
         x->left_size=(C?C->size:0);
         x->size=x->left_size+(B?B->size:0)+1;
-        x->left_sum=C?K::F(C->left_sum,K::F(C->v,C->right_sum)):O::neutral;
-        x->right_sum=B?K::F(B->left_sum,K::F(B->v,B->right_sum)):O::neutral;
-        y->left_sum=K::F(x->left_sum,K::F(x->v,x->right_sum));
-        y->right_sum=A?K::F(A->left_sum,K::F(A->v,A->right_sum)):O::neutral;
+        x->sum=K::F(C?C->sum:O::neutral,K::F(x->v,B?B->sum:O::neutral));
+        y->sum=K::F(K::F(x->sum,y->v),A?A->sum:O::neutral);
         y->left_size=x->size;
         y->size=y->left_size+1+(A?A->size:0);
 
@@ -443,8 +462,7 @@ namespace ost_utils
             tree->height = 1;
             tree->left_size=0;
             tree->size=1;
-            tree->left_sum=O::neutral;
-            tree->right_sum=O::neutral;
+            tree->sum=v;
             return tree;
         }
         auto dist = find_closest(tree,v);
@@ -462,17 +480,16 @@ namespace ost_utils
         p->right = nullptr;
         p->left = nullptr;
         p->parent = dist;
-        p->left_sum=O::neutral;
-        p->right_sum=O::neutral;
-        if (!dist->right)
+        p->sum=O::neutral;
+        if (v > dist->v)
         {
             dist->right = p;
-            dist->right_sum=p->v;
+            dist->sum=K::F(K::F(dist->left?dist->left->sum:O::neutral,dist->v),p->sum);
             dist->size=(dist->left_size+1+p->size);
         }
         else {
             dist->left = p;
-            dist->left_sum=p->v;
+            dist->sum=K::F(p->sum,K::F(dist->v,dist->right?dist->right->sum:O::neutral));
             dist->left_size=p->size;
             dist->size=(dist->left_size+1+(dist->right?dist->right->size:0));
         }
@@ -481,8 +498,7 @@ namespace ost_utils
         {
             p->left_size=(p->left?p->left->size:0);
             p->size=p->left_size+1+(p->right?p->right->size:0);
-            p->left_sum=(p->left?K::F(p->left->left_sum,K::F(p->left->right_sum,p->left->v)):O::neutral);
-            p->right_sum=(p->right?K::F(p->right->left_sum,K::F(p->right->right_sum,p->right->v)):O::neutral);
+            p->sum=K::F(p->left?p->left->sum:O::neutral,K::F(p->v,p->right?p->right->sum:O::neutral));
             p=p->parent;
         }
         rebalance(dist);
@@ -492,6 +508,7 @@ namespace ost_utils
     template<typename T, typename O=plus_t<T>>
     void remove(ost_node<T,O>*& tree)
     {
+        using K=ost_node<T,O>;
         if (!tree)
             return;
         if (!tree->right)
@@ -504,14 +521,22 @@ namespace ost_utils
                     tree->parent->left = tree->left;
                 else tree->parent->right = tree->left;
             }
-            auto s= tree;
+            auto s= tree,p=tree->parent;
             tree = tree->left;
             delete s;
+            while(p)
+            {
+                p->left_size=(p->left?p->left->size:0);
+                p->size=p->left_size+1+(p->right?p->right->size:0);
+                p->sum=K::F(p->left?p->left->sum:O::neutral,K::F(p->v,p->right?p->right->sum:O::neutral));
+                p=p->parent;
+                p->height=1+std::max(height(p->left),height(p->right));
+            }
             rebalance(tree);
         }
         else if (!tree->right->left)
         {
-            auto s = tree->right;
+            auto s = tree->right,p=tree->parent;
             s->left = tree->left;
             s->parent = tree->parent;
             if (s->parent)
@@ -524,6 +549,14 @@ namespace ost_utils
                 tree->left->parent = s;
             delete tree;
             tree = s;
+            while(p)
+            {
+                p->left_size=(p->left?p->left->size:0);
+                p->size=p->left_size+1+(p->right?p->right->size:0);
+                p->sum=K::F(p->left?p->left->sum:O::neutral,K::F(p->v,p->right?p->right->sum:O::neutral));
+                p=p->parent;
+                p->height=std::max(height(p->left),height(p->right))+1;
+            }
             rebalance(s);
         }
         else
@@ -531,13 +564,17 @@ namespace ost_utils
             auto s = tree->right;
             while (s->left)
                 s = s->left;
-            auto w = s->parent;
+            auto w = s->parent,p=w;
             w->left = s->right;
             if (s->right)
                 s->right->parent = w;
             s->left = tree->left;
             s->right = tree->right;
             s->parent = tree->parent;
+            s->sum=F(s->left?s->left->sum:O::neutral,F(s->v,s->right?s->right->sum:O::neutral));
+            s->left_size=s->left?s->left->size:O::neutral;
+            s->size=s->left_size+(s->right?s->right->size:0)+1;
+            s->height=std::max(heigh(s->left),heigh(s->right))+1;
             if (s->parent)
             {
                 if (tree->parent->left == tree)
@@ -549,6 +586,14 @@ namespace ost_utils
             tree->right->parent = s;
             delete tree;
             tree = s;
+            while(p)
+            {
+                p->left_size=(p->left?p->left->size:0);
+                p->size=p->left_size+1+(p->right?p->right->size:0);
+                p->sum=K::F(p->left?p->left->sum:O::neutral,K::F(p->v,p->right?p->right->sum:O::neutral));
+                p=p->parent;
+                p->height=std::max(heigh(p->left),height(p->right))+1;
+            }
             rebalance(w);
         }
     }
@@ -735,6 +780,16 @@ class ordered_segment_tree
     ost_node<T,O>* root,*start;
 public:
     ordered_segment_tree():root(nullptr){}
+    ordered_segment_tree(const ordered_segment_tree &o):root(ost_utils::clone(o.root))
+    {
+        start=root;
+        if(start) while(start->left)
+            start=start->left;
+    }
+    ordered_segment_tree(ordered_segment_tree &&o):root(std::move(o.root))
+    {
+        o.root=nullptr;
+    }
     ~ordered_segment_tree()
     {
         ost_utils::destroy(root);

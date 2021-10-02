@@ -2,18 +2,33 @@
 #define ___BINARY_OPERATOR___
 
 template<typename T>
-struct plus_t
+struct group_operation
+{
+};
+
+template<typename T>
+struct idempotent_operation
+{
+
+};
+
+template<typename T>
+struct plus_t : public group_operation<T>
 {
     T operator()(const T&a,const T&b) const
     {
         return a+b;
     }
     inline static T neutral=T();
+    T inv(const T&a) const
+    {
+        return -a;
+    }
 };
 
 
 template<typename T>
-struct max_t
+struct max_t:public idempotent_operation<T>
 {
     T operator()(const T&a,const T&b) const
     {
@@ -23,7 +38,7 @@ struct max_t
 };
 
 template<typename T>
-struct min_t
+struct min_t:public idempotent_operation<T>
 {
     T operator()(const T&a,const T&b) const
     {
@@ -44,7 +59,7 @@ struct multiplies_t
 };
 
 template<typename T>
-struct gcd_t
+struct gcd_t:public idempotent_operation<T>
 {
     T operator()(const T&a,const T&b) const
     {
@@ -55,7 +70,7 @@ struct gcd_t
 
 
 template<typename T>
-struct lcm_t
+struct lcm_t:public idempotent_operation<T>
         {
     T operator()(const T&a,const T&b) const
     {
@@ -65,17 +80,20 @@ struct lcm_t
         };
 
 template<typename T>
-struct xor_t
+struct xor_t:public group_operation<T>
 {
     T operator()(const T&a,const T&b) const
     {
         return a^b;
     }
     inline static T neutral=T();
+    T inv(const T&a) const{
+        return a;
+    }
 };
 
 template<typename T>
-struct and_t
+struct and_t:public idempotent_operation<T>
 {
     T operator()(const T&a,const T&b) const
     {
@@ -85,7 +103,7 @@ struct and_t
 };
 
 template<typename T>
-struct or_t
+struct or_t: public idempotent_operation<T>
 {
     T operator()(const T&a,const T&b) const
     {

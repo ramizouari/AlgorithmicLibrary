@@ -1,6 +1,7 @@
 #include "segment_tree.h"
-#include "ordered_segment_tree.h"
+#include "sparse_array.h"
 #include "dynamic_segment_tree.h"
+#include "ordered_segment_tree.h"
 #include <iostream>
 #include <vector>
 
@@ -18,10 +19,11 @@ struct monoid_t
 
 int main()
 {
-    dynamic_segment_tree<int> S;
-    for(int i=0;i<10;i++)
+    ordered_segment_tree<int> S;
+    int m=0;
+    for(int i=0;i<5;i++)
         S.insert(i);
-
-    std::cout << S.query(3,6);
+    S.remove(2);
+    std::cout << m;
     return false;
 }

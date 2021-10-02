@@ -21,8 +21,6 @@ namespace bst_utils
 	}
 
 	template<typename T>
-	bool is_avl(bst_node<T>* tree);
-	template<typename T>
 	bool find(bst_node<T>* a, T v)
 	{
 		if (!a)
@@ -335,53 +333,6 @@ namespace bst_utils
 	}
 
 	template<typename T>
-	void print(bst_node<T>* tree)
-	{
-		if (!tree)
-			return;
-		print(tree->left);
-		std::cout << tree->v << '\t';
-		print(tree->right);
-	}
-
-	template<typename T>
-	bool is_greaterequal_thanall(T v,bst_node<T> *tree)
-	{
-		if (!tree)
-			return true;
-		return (v >= tree->v) && is_greaterequal_thanall(v, tree->left) && is_greaterequal_thanall(v, tree->right);
-	}
-
-	template<typename T>
-	bool is_lessequal_thanall(T v, bst_node<T>* tree)
-	{
-		if (!tree)
-			return true;
-		return (v <= tree->v) && is_lessequal_thanall(v, tree->left) && is_lessequal_thanall(v, tree->right);
-	}
-
-	template<typename T>
-	bool is_bst(bst_node<T>* tree)
-	{
-		if (!tree)
-			return true;
-		return is_greaterequal_thanall<T>(tree->v, tree->left) && is_lessequal_thanall<T>(tree->v, tree->right)
-			&& is_bst(tree->left) && is_bst(tree->right);
-	}
-
-	template<typename T>
-	bool is_avl(bst_node<T>* tree)
-	{
-		if (!tree)
-			return true;
-		if (std::abs(height(tree->left) - height(tree->right)) > 1)
-		{
-			int a = 0;
-		}
-		return (std::abs(height(tree->left) - height(tree->right)) <= 1) && is_avl(tree->left) && is_avl(tree->right);
-	}
-
-	template<typename T>
 	bst_node<T>*  merge(bst_node<T>* t1,bst_node<T>* t2)
 	{
 		auto diff_H = height(t2) - height(t1);
@@ -524,11 +475,6 @@ public:
 		if (p->v != v)
 			return;
 		remove(p);
-	}
-
-	void print() const
-	{
-		bst_utils::print(root);
 	}
 
 	int height() const
