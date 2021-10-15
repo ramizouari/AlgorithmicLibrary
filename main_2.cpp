@@ -19,11 +19,8 @@ struct monoid_t
 
 int main()
 {
-    ordered_segment_tree<int> S;
+    sparse_array<int,gcd_t<int>> S({1,2,3,4,5});
     int m=0;
-    for(int i=0;i<5;i++)
-        S.insert(i);
-    S.remove(2);
-    std::cout << m;
+    std::cout << S.query(2,5);
     return false;
 }

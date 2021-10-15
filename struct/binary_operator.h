@@ -2,12 +2,18 @@
 #define ___BINARY_OPERATOR___
 
 template<typename T>
+struct binary_operation
+{
+    virtual T operator()(const T &a, const T & b) const =0;
+};
+
+template<typename T>
 struct group_operation
 {
 };
 
 template<typename T>
-struct idempotent_operation
+struct idempotent_operation:public binary_operation<T>
 {
 
 };

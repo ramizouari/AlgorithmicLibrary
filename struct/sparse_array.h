@@ -17,21 +17,7 @@ class sparse_array<T,O>
     std::vector<T> A;
     std::vector<std::vector<T>> S;
     int size;
-    void rec_build(int depth,int a,int L)
-    {
-        S[depth][a]=F.neutral;
-        if(L==1)
-        {
-            S[depth][a]=A[a];
-            return;
-        }
-        if(L>1)
-        {
-            rec_build(depth+1,2*a,L/2);
-            rec_build(depth+1,2*a+L/2,L/2);
-            S[depth][a]=F(S[depth+1][2*a],S[depth+1][2*a+L/2]);
-        }
-    }
+
     void build()
     {
         int n=A.size(),m=1;

@@ -21,7 +21,7 @@ struct dst_node
 {
     inline static O F=O();
     T v,sum;
-    int height,left_size,size;
+    int height,size;
     dst_node * left, * right, *parent;
 };
 
@@ -29,12 +29,19 @@ namespace dst_utils
 {
 
     template<typename T, typename O=plus_t<T>>
-    int height(dst_node<T,O>* tree)
+    inline int height(dst_node<T,O>* tree)
     {
         if (!tree)
             return 0;
         return tree->height;
     }
+
+    template<typename T, typename O=plus_t<T>>
+    inline int size(dst_node<T,O>* tree)
+    {
+        return tree?tree->size:0;
+    }
+
 
     template<typename T, typename O=plus_t<T>>
     bool find(dst_node<T,O>* a, T v)
@@ -53,11 +60,11 @@ namespace dst_utils
     {
         if(!a)
             return nullptr;
-        if(a->left_size==order)
+        if(size(a->left)==order)
             return a;
-        else if(a->left_size>order)
+        else if(size(a->left)>order)
             return find_by_order(a->left,order);
-        else return find_by_order(a->right,order-a->left_size-1);
+        else return find_by_order(a->right,order-size(a->left)-1);
     }
 
     template<typename T, typename O=plus_t<T>>
@@ -66,9 +73,9 @@ namespace dst_utils
         if (!a)
             return -1;
         if (v == a->v)
-            return offset+(a?a->left_size:0);
+            return offset+(a?size(a->left):0);
         else if (v > a->v)
-            return order(a->right, v,offset+1+(a?a->left_size:0));
+            return order(a->right, v,offset+1+(a?size(a->left):0));
         else return order(a->left, v,offset);
     }
 
@@ -78,13 +85,13 @@ namespace dst_utils
         using K=dst_node<T,O>;
         if (!a || n<=0)
             return O::neutral;
-        else if(n<a->left_size)
+        else if(n<size(a->left))
             return prefix_query(a->left,n);
-        else if(n==a->left_size)
+        else if(n==size(a->left))
             return a->left?a->left->sum:O::neutral;
         else if(n==a->size)
             return a->sum;
-        return K::F(K::F(a->left?a->left->sum:O::neutral,a->v),prefix_query(a->right,n-a->left_size-1));
+        return K::F(K::F(a->left?a->left->sum:O::neutral,a->v),prefix_query(a->right,n-size(a->left)-1));
     }
 
     template<typename T, typename O=plus_t<T>>
@@ -96,15 +103,15 @@ namespace dst_utils
         if(l==0)
             return prefix_query(a,r);
 
-        if(a->left_size>=l)
+        if(size(a->left)>=l)
         {
-            T R1=query(a->left,l,std::min(a->left_size,r)),R2=query(a->right,0,std::max(r-a->left_size-1,0));
+            T R1=query(a->left,l,std::min(size(a->left),r)),R2=query(a->right,0,std::max(r-size(a->left)-1,0));
             T S=O::neutral;
-            if(r>a->left_size)
+            if(r>size(a->left))
                 S=a->v;
             return K::F(K::F(R1,S),R2);
         }
-        else return query(a->right,l-a->left_size-1,std::max(r-a->left_size-1,0));
+        else return query(a->right,l-size(a->left)-1,std::max(r-size(a->left)-1,0));
     }
 
     template<typename T, typename O=plus_t<T>>
@@ -219,10 +226,8 @@ namespace dst_utils
         y->parent = x->parent;
         x->right = C;
         x->left = B;
-        x->left_size=(B?B->size:0);
-        x->size=x->left_size+1+(C?C->size:0);
-        y->left_size=(A?A->size:0);
-        y->size=y->left_size+1+x->size;
+        x->size=size(x->left)+1+size(C);
+        y->size=size(y->left)+1+x->size;
         x->sum=K::F(B?B->sum:O::neutral,K::F(x->v,C?C->sum:O::neutral));
         y->sum=K::F(A?A->sum:O::neutral,K::F(y->v,x->sum));
         if (A)
@@ -256,10 +261,8 @@ namespace dst_utils
         y->parent = x->parent;
         x->left = C;
         x->right = B;
-        x->left_size=(C?C->size:0);
-        x->size=x->left_size+(B?B->size:0)+1;
-        y->left_size=x->size;
-        y->size=y->left_size+1+(A?A->size:0);
+        x->size=size(x->left)+(B?B->size:0)+1;
+        y->size=size(y->left)+1+size(A);
         x->sum=K::F(C?C->sum:O::neutral,K::F(x->v,B?B->sum:O::neutral));
         y->sum=K::F(K::F(x->sum,y->v),A?A->sum:O::neutral);
 
@@ -334,7 +337,6 @@ namespace dst_utils
             tree->left = nullptr;
             tree->right = nullptr;
             tree->height = 1;
-            tree->left_size=0;
             tree->size=1;
             tree->sum=v;
             return tree;
@@ -355,7 +357,6 @@ namespace dst_utils
         auto p = new dst_node<T,O>(),q=p;
         p->v = v;
         p->height = 1;
-        p->left_size=0;
         p->size=1;
         p->right = nullptr;
         p->left = nullptr;
@@ -365,19 +366,17 @@ namespace dst_utils
         {
             dist->left = p;
             dist->sum=K::F(p->sum,K::F(dist->v,dist->right?dist->right->sum:O::neutral));
-            dist->left_size=p->size;
-            dist->size=(dist->left_size+1+(dist->right?dist->right->size:0));
+            dist->size=size(dist->left)+1+size(dist->right);
         }
         else {
             dist->right = p;
             dist->sum=K::F(K::F(dist->left?dist->left->sum:O::neutral,dist->v),p->sum);
-            dist->size=(dist->left_size+1+p->size);
+            dist->size=size(dist->left)+1+p->size;
         }
         dist->height = std::max(height(dist->right), height(dist->left)) + 1;
         while(p)
         {
-            p->left_size=(p->left?p->left->size:0);
-            p->size=p->left_size+1+(p->right?p->right->size:0);
+            p->size=size(p->left)+1+size(p->right);
             p->sum=K::F(p->left?p->left->sum:O::neutral,K::F(p->v,p->right?p->right->sum:O::neutral));
             p=p->parent;
         }
